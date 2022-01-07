@@ -1,0 +1,57 @@
+=== Pool ===
+
+ON {"value":352207,"protocol":1,"length":24,"delay":335,"mhz":315.026}
+B+ {"value":352204,"protocol":1,"length":24,"delay":334,"mhz":315.026}
+B- {"value":352048,"protocol":1,"length":24,"delay":334,"mhz":315.026}
+S+ {"value":352003,"protocol":1,"length":24,"delay":334,"mhz":315.026}
+S- {"value":352012,"protocol":1,"length":24,"delay":334,"mhz":315.026}
+R  {"value":352063,"protocol":1,"length":24,"delay":335,"tre_state":"00FFFF110111","mhz":315.026}
+G  {"value":352240,"protocol":1,"length":24,"delay":335,"mhz":315.026}
+B  {"value":352195,"protocol":1,"length":24,"delay":335,"mhz":315.026}
+YE {"value":352015,"protocol":1,"length":24,"delay":336,"mhz":315.026}
+CY {"value":352252,"protocol":1,"length":24,"delay":335,"mhz":315.026}
+PU {"value":352243,"protocol":1,"length":24,"delay":334,"mhz":315.026}
+ 
+ 
+=== Out ====
+
+Stop {"value":1649862198,"protocol":1,"length":32,"delay":265,"mhz":433.92}
+Low {"value":1649861189,"protocol":1,"length":32,"delay":268,"mhz":433.92}
+Medium {"value":1649861461,"protocol":1,"length":32,"delay":265,"mhz":433.92}
+High  {"value":1649863020,"protocol":1,"length":32,"delay":268,"mhz":433.92}
+
+1H {"value":1649860981,"protocol":1,"length":32,"delay":265,"mhz":433.92}
+2H {"value":1649862404,"protocol":1,"length":32,"delay":264,"mhz":433.92}
+4H {"value":1649861911,"protocol":1,"length":32,"delay":268,"mhz":433.92}
+8H {"value":1649863211,"protocol":1,"length":32,"delay":268,"mhz":433.92}
+
+=== Anton ===
+
+Stop {"value":583673471,"protocol":1,"length":32,"delay":264,"mhz":433.92}
+Low {"value":583672426,"protocol":1,"length":32,"delay":267,"mhz":433.92}
+Medium {"value":583672698,"protocol":1,"length":32,"delay":264,"mhz":433.92}
+High  {"value":583674119,"protocol":1,"length":32,"delay":267,"mhz":433.92}
+
+1H {"value":583672094,"protocol":1,"length":32,"delay":263,"mhz":433.92}
+2H {"value":583673643,"protocol":1,"length":32,"delay":264,"mhz":433.92}
+4H {"value":583673144,"protocol":1,"length":32,"delay":268,"mhz":433.92}
+8H {"value":583674432,"protocol":1,"length":32,"delay":267,"mhz":433.92}
+
+=== Anna ===
+
+Stop {"value":3758757419,"protocol":1,"length":32,"delay":263,"mhz":433.92}
+Low {"value":3758756459,"protocol":1,"length":32,"delay":267,"mhz":433.92}
+Medium {"value":3758756731,"protocol":1,"length":32,"delay":263,"mhz":433.92}
+High  {"value":3758758150,"protocol":1,"length":32,"delay":266,"mhz":433.92}
+
+1H {"value":3758756127,"protocol":1,"length":32,"delay":263,"mhz":433.92}
+2H {"value":3758757674,"protocol":1,"length":32,"delay":263,"mhz":433.92}
+4H {"value":3758757177,"protocol":1,"length":32,"delay":268,"mhz":433.92}
+8H {"value":3758758465,"protocol":1,"length":32,"delay":267,"mhz":433.92}
+
+=== Main ===
+
+Stop {"value":4031,"protocol":8,"length":12,"delay":223,"mhz":433.92}
+Low {"value":2047,"protocol":8,"length":12,"delay":223,"tre_state":"F11111","mhz":433.92}
+Medium {"value":3839,"protocol":8,"length":12,"delay":224,"mhz":433.92}
+High {"value":3967,"protocol":8,"length":12,"delay":223,"tre_state":"11F111","mhz":433.92}

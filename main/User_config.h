@@ -135,6 +135,7 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 //#define MDNS_SD //uncomment if you  want to use mdns for discovering automatically your ip server, please note that MDNS with ESP32 can cause the BLE to not work
 #define maxConnectionRetry     10 //maximum MQTT connection attempts before going to wifimanager setup if never connected once
 #define maxConnectionRetryWifi 5 //maximum Wifi connection attempts with existing credential at start (used to bypass ESP32 issue on wifi connect)
+#define maxRetryWatchDog       11 //maximum Wifi or mqtt re-connection attempts before restarting
 
 //set minimum quality of signal so it ignores AP's under that quality
 #define MinimumWifiSignalQuality 8
@@ -144,10 +145,12 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #if defined(ESP8266) || defined(ESP32) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
 #  define parameters_size     60
 #  define mqtt_topic_max_size 100
-#  ifdef MQTT_HTTPS_FW_UPDATE
-#    define mqtt_max_packet_size 2048
-#  else
-#    define mqtt_max_packet_size 1024
+#  ifndef mqtt_max_packet_size
+#    ifdef MQTT_HTTPS_FW_UPDATE
+#      define mqtt_max_packet_size 2560
+#    else
+#      define mqtt_max_packet_size 1024
+#    endif
 #  endif
 #else
 #  define parameters_size      30
@@ -317,7 +320,8 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 //#define ZactuatorFASTLED "FASTLED" //ESP8266, Arduino, ESP32, Sonoff RF Bridge
 //#define ZboardM5STICKC "M5StickC"
 //#define ZboardM5STICKCP "M5StickCP"
-//#define ZboardM5STACK  "ZboardM5STACK"
+//#define ZboardM5STACK  "M5STACK"
+//#define ZboardM5TOUGH  "M5TOUGH"
 //#define ZradioCC1101   "CC1101"   //ESP8266, ESP32
 //#define ZactuatorPWM   "PWM"      //ESP8266, ESP32
 //#define ZsensorSHTC3 "SHTC3" //ESP8266, Arduino, ESP32,  Sonoff RF Bridge

@@ -50,14 +50,14 @@ bool zBLEConnect::writeData(BLEAction* action) {
           std::string temp = action->value.substr(i, 2);
           buf.push_back((uint8_t)strtoul(temp.c_str(), nullptr, 16));
         }
-        return pChar->writeValue((const uint8_t*)&buf[0], buf.size());
+        return pChar->writeValue((const uint8_t*)&buf[0], buf.size(), !pChar->canWriteNoResponse());
       }
       case BLE_VAL_INT:
-        return pChar->writeValue(strtol(action->value.c_str(), nullptr, 0));
+        return pChar->writeValue(strtol(action->value.c_str(), nullptr, 0), !pChar->canWriteNoResponse());
       case BLE_VAL_FLOAT:
-        return pChar->writeValue(strtod(action->value.c_str(), nullptr));
+        return pChar->writeValue(strtod(action->value.c_str(), nullptr), !pChar->canWriteNoResponse());
       default:
-        return pChar->writeValue(action->value);
+        return pChar->writeValue(action->value, !pChar->canWriteNoResponse());
     }
   }
   return false;
@@ -82,12 +82,12 @@ bool zBLEConnect::processActions(std::vector<BLEAction>& actions) {
       if (NimBLEAddress(it.addr) == m_pClient->getPeerAddress()) {
         JsonObject BLEresult = getBTJsonObject();
         BLEresult["id"] = it.addr;
-        BLEresult["service"] = (char*)it.service.toString().c_str();
-        BLEresult["characteristic"] = (char*)it.characteristic.toString().c_str();
+        BLEresult["service"] = it.service.toString();
+        BLEresult["characteristic"] = it.characteristic.toString();
 
         if (it.write) {
           Log.trace(F("processing BLE write" CR));
-          BLEresult["write"] = it.value.c_str();
+          BLEresult["write"] = it.value;
           result = writeData(&it);
         } else {
           Log.trace(F("processing BLE read" CR));
@@ -117,9 +117,11 @@ bool zBLEConnect::processActions(std::vector<BLEAction>& actions) {
           }
         }
 
-        it.complete = true;
+        it.complete = result;
         BLEresult["success"] = result;
-        pubBT(BLEresult);
+        if (result || it.ttl <= 1) {
+          pubBT(BLEresult);
+        }
       }
     }
   }
@@ -143,10 +145,10 @@ void LYWSD03MMC_connect::notifyCB(NimBLERemoteCharacteristic* pChar, uint8_t* pD
       for (std::vector<BLEdevice*>::iterator it = devices.begin(); it != devices.end(); ++it) {
         BLEdevice* p = *it;
         if ((strcmp(p->macAdr, (char*)mac_address.c_str()) == 0)) {
-          if (p->sensorModel_id.compare("LYWSD03MMC") == 0)
+          if (p->sensorModel_id == BLEconectable::id::LYWSD03MMC)
             BLEdata["model"] = "LYWSD03MMC";
-          else if (p->sensorModel_id.compare("MHO_C401") == 0)
-            BLEdata["model"] = "MHO_C401";
+          else if (p->sensorModel_id == BLEconectable::id::MHO_C401)
+            BLEdata["model"] = "MHO-C401";
         }
       }
       BLEdata["id"] = (char*)mac_address.c_str();

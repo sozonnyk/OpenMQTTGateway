@@ -824,8 +824,9 @@ void launchBTDiscovery() {
 #    endif
     BLEdevice* p = *it;
     Log.trace(F("Device mac %s" CR), p->macAdr);
-    if (p->sensorModel_id != TheengsDecoder::BLE_ID_NUM::UNKNOWN_MODEL &&
-        p->sensorModel_id < BLEconectable::id::MIN && !isDiscovered(p)) {
+    if (p->sensorModel_id > TheengsDecoder::BLE_ID_NUM::UNKNOWN_MODEL &&
+        p->sensorModel_id < TheengsDecoder::BLE_ID_NUM::BLE_ID_MAX &&
+        !isDiscovered(p)) {
       String macWOdots = String(p->macAdr);
       macWOdots.replace(":", "");
       Log.trace(F("Looking for Model_id: %d" CR), p->sensorModel_id);
@@ -843,7 +844,7 @@ void launchBTDiscovery() {
           Log.trace("Name: %s", prop.value()["name"].as<const char*>());
           String discovery_topic = String(subjectBTtoMQTT) + "/" + macWOdots;
           String entity_name = String(model_id.c_str()) + "-" + String(prop.key().c_str());
-          String unique_id = macWOdots + "-" + entity_name;
+          String unique_id = macWOdots + "-" + String(prop.key().c_str());
 #    if OpenHABDiscovery
           String value_template = "{{ value_json." + String(prop.key().c_str()) + "}}";
 #    else

@@ -1,17 +1,17 @@
-/*  
-  OpenMQTTGateway  - ESP8266 or Arduino program for home automation 
+/*
+  OpenMQTTGateway  - ESP8266 or Arduino program for home automation
 
-   Act as a wifi or ethernet gateway between your 433mhz/infrared IR signal  and a MQTT broker 
+   Act as a wifi or ethernet gateway between your 433mhz/infrared IR signal  and a MQTT broker
    Send and receiving command by MQTT
- 
+
   This program enables to:
  - receive MQTT data from a topic and send signals corresponding to the received MQTT data
  - publish MQTT data to a different topic related to received signals
-  
+
     Copyright: (c)Florian ROBERT
-  
+
     This file is part of OpenMQTTGateway.
-    
+
     OpenMQTTGateway is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -41,16 +41,16 @@
  * - mqtt_pass
  * - mqtt_server
  * - mqtt_port
- * 
+ *
  * To completely disable WifiManager, define ESPWifiManualSetup.
  * If you do so, please don't forget to set these variables before compiling
- * 
- * Otherwise you can provide these credentials on the web interface after connecting 
+ *
+ * Otherwise you can provide these credentials on the web interface after connecting
  * to the access point with your password (SSID: WifiManager_ssid, password: WifiManager_password)
  */
 /*-------------DEFINE GATEWAY NAME BELOW IT CAN ALSO BE DEFINED IN platformio.ini----------------*/
 
-// Uncomment to use the mac address in the format of 112233445566 as the gateway name
+// Uncomment to use the MAC address first 4 digits in the format of 5566 as the suffix of the short gateway name.
 // Any definition of Gateway_Name will be ignored. The Gateway_Short_name _ MAC will be used as the access point name.
 //#define USE_MAC_AS_GATEWAY_NAME
 #ifndef Gateway_Name
@@ -66,10 +66,10 @@
 
 /*-------------DEFINE YOUR NETWORK PARAMETERS BELOW----------------*/
 
-//#define NetworkAdvancedSetup true //uncomment if you want to set advanced network parameters, not uncommented you can set the IP and mac only
+//#define NetworkAdvancedSetup true //uncomment if you want to set advanced network parameters, not uncommented you can set the IP and MAC only
 #ifdef NetworkAdvancedSetup
 #  if defined(ESP8266) || defined(ESP32)
-const byte ip[] = {192, 168, 1, 99}; //ip adress of the gateway, already defined for arduino below
+const byte ip[] = {192, 168, 1, 99}; //IP address of the gateway, already defined for arduino below
 #  endif
 const byte gateway[] = {0, 0, 0, 0};
 const byte Dns[] = {0, 0, 0, 0};
@@ -80,7 +80,7 @@ const byte subnet[] = {255, 255, 255, 0};
 //#  define ESPWifiManualSetup true //uncomment you don't want to use wifimanager for your credential settings on ESP
 #else // for arduino boards
 const byte ip[] = {192, 168, 1, 99};
-const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield mac adress
+const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield MAC address
 #endif
 
 //#define ESP32_ETHERNET=true // Uncomment to use Ethernet module on ESP32 Ethernet gateway and adapt the settings to your board below, the default parameter are for OLIMEX ESP32 Gateway
@@ -114,6 +114,7 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #  endif
 #endif
 
+//#define WM_PWD_FROM_MAC true // enable to set the password from the last 8 digits of the ESP MAC address for enhanced security, enabling this option requires to have access to the MAC address, either through a sticker or with serial monitoring
 #ifndef WifiManager_password
 #  define WifiManager_password "your_password" //this is going to be the WPA2-PSK password for the initial setup access point
 #endif
@@ -132,10 +133,10 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 //#define WIFIMNG_HIDE_MQTT_CONFIG //Uncomment so as to hide MQTT setting from Wifi manager page
 
 /*-------------DEFINE YOUR ADVANCED NETWORK PARAMETERS BELOW----------------*/
-//#define MDNS_SD //uncomment if you  want to use mdns for discovering automatically your ip server, please note that MDNS with ESP32 can cause the BLE to not work
+//#define MDNS_SD //uncomment if you  want to use mDNS for discovering automatically your IP server, please note that mDNS with ESP32 can cause the BLE to not work
 #define maxConnectionRetry     10 //maximum MQTT connection attempts before going to wifimanager setup if never connected once
 #define maxConnectionRetryWifi 5 //maximum Wifi connection attempts with existing credential at start (used to bypass ESP32 issue on wifi connect)
-#define maxRetryWatchDog       11 //maximum Wifi or mqtt re-connection attempts before restarting
+#define maxRetryWatchDog       11 //maximum Wifi or MQTT re-connection attempts before restarting
 
 //set minimum quality of signal so it ignores AP's under that quality
 #define MinimumWifiSignalQuality 8
@@ -144,7 +145,7 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 //MQTT Parameters definition
 #if defined(ESP8266) || defined(ESP32) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
 #  define parameters_size     60
-#  define mqtt_topic_max_size 100
+#  define mqtt_topic_max_size 150
 #  ifndef mqtt_max_packet_size
 #    ifdef MQTT_HTTPS_FW_UPDATE
 #      define mqtt_max_packet_size 2560
@@ -154,7 +155,7 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #  endif
 #else
 #  define parameters_size      30
-#  define mqtt_topic_max_size  50
+#  define mqtt_topic_max_size  75
 #  define mqtt_max_packet_size 128
 #endif
 
@@ -172,6 +173,10 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #endif
 
 #if defined(ESP8266) || defined(ESP32)
+// Uncomment to use a device running TheengsGateway to decode BLE data. (https://github.com/theengs/gateway)
+// Set the topic to the subscribe topic configured in the TheengGateway
+// #define MQTTDecodeTopic "MQTTDecode"
+
 // The root ca certificate used for validating the MQTT broker
 // The certificate must be in PEM ascii format
 const char* certificate PROGMEM = R"EOF("
@@ -191,11 +196,15 @@ const char* certificate PROGMEM = R"EOF("
 #    define MQTT_SECURE_DEFAULT false
 #  endif
 
+#  ifndef MQTT_CERT_VALIDATE_DEFAULT
+#    define MQTT_CERT_VALIDATE_DEFAULT false
+#  endif
+
 #  ifndef AWS_IOT
 #    define AWS_IOT false
 #  endif
 
-//#  define MQTT_HTTPS_FW_UPDATE //uncomment to enable updating via mqtt message.
+//#  define MQTT_HTTPS_FW_UPDATE //uncomment to enable updating via MQTT message.
 
 #  ifdef MQTT_HTTPS_FW_UPDATE
 // If used, this should be set to the root CA certificate of the server hosting the firmware.
@@ -203,33 +212,40 @@ const char* certificate PROGMEM = R"EOF("
 // The default certificate is for github.
 const char* OTAserver_cert PROGMEM = R"EOF("
 -----BEGIN CERTIFICATE-----
-MIIDxTCCAq2gAwIBAgIQAqxcJmoLQJuPC3nyrkYldzANBgkqhkiG9w0BAQUFADBs
+MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh
 MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
-d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBIaWdoIEFzc3VyYW5j
-ZSBFViBSb290IENBMB4XDTA2MTExMDAwMDAwMFoXDTMxMTExMDAwMDAwMFowbDEL
-MAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3
-LmRpZ2ljZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgSGlnaCBBc3N1cmFuY2Ug
-RVYgUm9vdCBDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMbM5XPm
-+9S75S0tMqbf5YE/yc0lSbZxKsPVlDRnogocsF9ppkCxxLeyj9CYpKlBWTrT3JTW
-PNt0OKRKzE0lgvdKpVMSOO7zSW1xkX5jtqumX8OkhPhPYlG++MXs2ziS4wblCJEM
-xChBVfvLWokVfnHoNb9Ncgk9vjo4UFt3MRuNs8ckRZqnrG0AFFoEt7oT61EKmEFB
-Ik5lYYeBQVCmeVyJ3hlKV9Uu5l0cUyx+mM0aBhakaHPQNAQTXKFx01p8VdteZOE3
-hzBWBOURtCmAEvF5OYiiAhF8J2a3iLd48soKqDirCmTCv2ZdlYTBoSUeh10aUAsg
-EsxBu24LUTi4S8sCAwEAAaNjMGEwDgYDVR0PAQH/BAQDAgGGMA8GA1UdEwEB/wQF
-MAMBAf8wHQYDVR0OBBYEFLE+w2kD+L9HAdSYJhoIAu9jZCvDMB8GA1UdIwQYMBaA
-FLE+w2kD+L9HAdSYJhoIAu9jZCvDMA0GCSqGSIb3DQEBBQUAA4IBAQAcGgaX3Nec
-nzyIZgYIVyHbIUf4KmeqvxgydkAQV8GK83rZEWWONfqe/EW1ntlMMUu4kehDLI6z
-eM7b41N5cdblIZQB2lWHmiRk9opmzN6cN82oNLFpmyPInngiK3BD41VHMWEZ71jF
-hS9OMPagMRYjyOfiZRYzy78aG6A9+MpeizGLYAiJLQwGXFK3xPkKmNEVX58Svnw2
-Yzi9RKR/5CYrCsSXaQ3pjOLAEFe4yHYSkVXySGnYvCoCWw9E1CAx2/S6cCZdkGCe
-vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep
-+OkuE6N36B9K
+d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD
+QTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT
+MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j
+b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB
+CSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97
+nh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt
+43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P
+T19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4
+gdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO
+BgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR
+TLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw
+DQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr
+hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg
+06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF
+PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls
+YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk
+CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
 -----END CERTIFICATE-----
 ")EOF";
 
 #    ifndef MQTT_HTTPS_FW_UPDATE_USE_PASSWORD
 #      define MQTT_HTTPS_FW_UPDATE_USE_PASSWORD 1 // Set this to 0 if not using TLS connection to MQTT broker to prevent clear text passwords being sent.
 #    endif
+#    if DEVELOPMENTOTA
+#      define OTA_JSON_URL "https://github.com/1technophile/OpenMQTTGateway/raw/gh-pages/dev/firmware_build/latest_version_dev.json" //OTA url used to discover new versions of the firmware from development nightly builds
+#    else
+#      define OTA_JSON_URL "https://github.com/1technophile/OpenMQTTGateway/raw/gh-pages/firmware_build/latest_version.json" //OTA url used to discover new versions of the firmware
+#    endif
+#    define ENTITY_PICTURE   "https://github.com/1technophile/OpenMQTTGateway/raw/development/docs/img/Openmqttgateway_logo_mini_margins.png"
+#    define RELEASE_LINK_DEV "https://github.com/1technophile/OpenMQTTGateway/raw/gh-pages/dev/firmware_build/"
+#    define RELEASE_LINK     "https://github.com/1technophile/OpenMQTTGateway/releases/download/"
 #  endif
 
 #  ifndef MQTT_SECURE_SELF_SIGNED
@@ -278,13 +294,34 @@ static_assert(MQTT_SECURE_SELF_SIGNED_INDEX_DEFAULT < (sizeof(certs_array) / siz
 #  endif
 #endif
 
+/**
+ * Deep-sleep for the ESP8266.
+ * Set the wake pin.
+ */
+#if defined(DEEP_SLEEP_IN_US) && defined(ESP8266)
+#  ifndef ESP8266_DEEP_SLEEP_WAKE_PIN
+#    define ESP8266_DEEP_SLEEP_WAKE_PIN D0
+#  endif
+#endif
+
+/**
+ * Ext wake for Deep-sleep for the ESP32.
+ * Set the wake pin state.
+ */
+#ifdef ESP32_EXT0_WAKE_PIN
+#  ifndef ESP32_EXT0_WAKE_PIN_STATE
+#    define ESP32_EXT0_WAKE_PIN_STATE 1
+#  endif
+#endif
+
 /*------------------DEEP SLEEP parameters ------------------*/
+//DEFAULT_LOW_POWER_MODE -1 to normal mode, low power mode can't be used on this build
 //DEFAULT_LOW_POWER_MODE 0 to normal mode (no power consumption optimisations)
 //DEFAULT_LOW_POWER_MODE 1 to activate deep sleep
 //DEFAULT_LOW_POWER_MODE 2 to activate deep sleep (LCD is turned OFF)
 #ifdef ESP32
 #  ifndef DEFAULT_LOW_POWER_MODE
-#    define DEFAULT_LOW_POWER_MODE 0
+#    define DEFAULT_LOW_POWER_MODE -1
 #  endif
 int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #endif
@@ -309,9 +346,12 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 //#define ZsensorHCSR501 "HCSR501"  //ESP8266, Arduino, ESP32,  Sonoff RF Bridge
 //#define ZsensorADC     "ADC"      //ESP8266, Arduino, ESP32
 //#define ZsensorBH1750  "BH1750"   //ESP8266, Arduino, ESP32
+//#define ZsensorMQ2 "MQ2"  //ESP8266, Arduino, ESP32
+//#define ZsensorTEMT6000 "TEMT6000"  //ESP8266
 //#define ZsensorTSL2561 "TSL2561"  //ESP8266, Arduino, ESP32
 //#define ZsensorBME280  "BME280"   //ESP8266, Arduino, ESP32
 //#define ZsensorHTU21   "HTU21"    //ESP8266, Arduino, ESP32
+//#define ZsensorLM75   "LM75"    //ESP8266, Arduino, ESP32
 //#define ZsensorDHT     "DHT"      //ESP8266, Arduino, ESP32,  Sonoff RF Bridge
 //#define ZsensorDS1820  "DS1820"   //ESP8266, Arduino, ESP32
 //#define ZsensorGPIOKeyCode "GPIOKeyCode" //ESP8266, Arduino, ESP32
@@ -341,6 +381,9 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #ifndef will_Retain
 #  define will_Retain true
 #endif
+#ifndef sensor_Retain
+#  define sensor_Retain false
+#endif
 #ifndef will_Message
 #  define will_Message "offline"
 #endif
@@ -349,18 +392,28 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #endif
 
 #ifndef jsonPublishing
-#  define jsonPublishing true //comment if you don't want to use Json  publishing  (one topic for all the parameters)
+#  define jsonPublishing true //define false if you don't want to use Json publishing (one topic for all the parameters)
 #endif
 //example home/OpenMQTTGateway_ESP32_DEVKIT/BTtoMQTT/4XXXXXXXXXX4 {"rssi":-63,"servicedata":"fe0000000000000000000000000000000000000000"}
 #ifndef jsonReceiving
-#  define jsonReceiving true //comment if you don't want to use Json  reception analysis
+#  define jsonReceiving true //define false if you don't want to use Json  reception analysis
 #endif
 
-//#define simplePublishing true //comment if you don't want to use simple publishing (one topic for one parameter)
+#ifndef simplePublishing
+#  define simplePublishing false //define true if you want to use simple publishing (one topic for one parameter)
+#endif
 //example
 // home/OpenMQTTGateway_ESP32_DEVKIT/BTtoMQTT/4XXXXXXXXXX4/rssi -63.0
 // home/OpenMQTTGateway_ESP32_DEVKIT/BTtoMQTT/4XXXXXXXXXX4/servicedata fe0000000000000000000000000000000000000000
-//#define simpleReceiving true //comment if you don't want to use old way reception analysis
+#ifndef simpleReceiving
+#  define simpleReceiving true //define false if you don't want to use old way reception analysis
+#endif
+#ifndef message_UTCtimestamp
+#  define message_UTCtimestamp false //define true if you want messages to be timestamped in ISO8601 UTC format (e.g.: "UTCtime"="2023-12-26T19:10:20Z")
+#endif
+#ifndef message_unixtimestamp
+#  define message_unixtimestamp false //define true if you want messages to have an unix timestamp (e.g.: "unixtime"=1679015107)
+#endif
 
 /*-------------DEFINE YOUR OTA PARAMETERS BELOW----------------*/
 #ifndef ota_hostname
@@ -372,55 +425,228 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #ifndef ota_port
 #  define ota_port 8266
 #endif
+// timeout for OTA activities
+// OTA upload with no activity in this period is considered inactive
+// As long as OTA upload is considered "active", we avoid rebooting e.g.
+// in case of failures connecting to MQTT
+#ifndef ota_timeout_millis
+#  define ota_timeout_millis 30000
+#endif
 
+/*-------------ERRORS, INFOS, SEND RECEIVE Display through LED----------------*/
+#ifndef RGB_INDICATORS // Management of Errors, reception/emission and informations indicators with basic LED
 /*-------------DEFINE PINs FOR STATUS LEDs----------------*/
-#ifndef LED_SEND_RECEIVE
-#  ifdef ESP8266
-#    define LED_SEND_RECEIVE 40
-#  elif ESP32
-#    define LED_SEND_RECEIVE 40
-#  elif __AVR_ATmega2560__ //arduino mega
-#    define LED_SEND_RECEIVE 40
-#  else //arduino uno/nano
-#    define LED_SEND_RECEIVE 40
+#  ifndef LED_SEND_RECEIVE
+#    ifdef ESP8266
+//#      define LED_SEND_RECEIVE 40
+#    elif ESP32
+//#      define LED_SEND_RECEIVE 40
+#    elif __AVR_ATmega2560__ //arduino mega
+//#      define LED_SEND_RECEIVE 40
+#    else //arduino uno/nano
+//#      define LED_SEND_RECEIVE 40
+#    endif
 #  endif
-#endif
-#ifndef LED_SEND_RECEIVE_ON
-#  define LED_SEND_RECEIVE_ON HIGH
-#endif
-#ifndef LED_ERROR
-#  ifdef ESP8266
-#    define LED_ERROR 42
-#  elif ESP32
-#    define LED_ERROR 42
-#  elif __AVR_ATmega2560__ //arduino mega
-#    define LED_ERROR 42
-#  else //arduino uno/nano
-#    define LED_ERROR 42
+#  ifndef LED_SEND_RECEIVE_ON
+#    define LED_SEND_RECEIVE_ON HIGH
 #  endif
-#endif
-#ifndef LED_ERROR_ON
-#  define LED_ERROR_ON HIGH
-#endif
-#ifndef LED_INFO
-#  ifdef ESP8266
-#    define LED_INFO 44
-#  elif ESP32
-#    define LED_INFO 44
-#  elif __AVR_ATmega2560__ //arduino mega
-#    define LED_INFO 44
-#  else //arduino uno/nano
-#    define LED_INFO 44
+#  ifndef LED_ERROR
+#    ifdef ESP8266
+//#      define LED_ERROR 42
+#    elif ESP32
+//#      define LED_ERROR 42
+#    elif __AVR_ATmega2560__ //arduino mega
+//#      define LED_ERROR 42
+#    else //arduino uno/nano
+//#      define LED_ERROR 42
+#    endif
 #  endif
-#endif
-#ifndef LED_INFO_ON
-#  define LED_INFO_ON HIGH
+#  ifndef LED_ERROR_ON
+#    define LED_ERROR_ON HIGH
+#  endif
+#  ifndef LED_INFO
+#    ifdef ESP8266
+//#      define LED_INFO 44
+#    elif ESP32
+//#      define LED_INFO 44
+#    elif __AVR_ATmega2560__ //arduino mega
+//#      define LED_INFO 44
+#    else //arduino uno/nano
+//#      define LED_INFO 44
+#    endif
+#  endif
+#  ifndef LED_INFO_ON
+#    define LED_INFO_ON HIGH
+#  endif
+
+#  ifdef LED_ERROR
+#    define SetupIndicatorError() \
+      pinMode(LED_ERROR, OUTPUT); \
+      ErrorIndicatorOFF();
+#    define ErrorIndicatorON()  digitalWrite(LED_ERROR, LED_ERROR_ON)
+#    define ErrorIndicatorOFF() digitalWrite(LED_ERROR, !LED_ERROR_ON)
+#  else
+#    define SetupIndicatorError()
+#    define ErrorIndicatorON()
+#    define ErrorIndicatorOFF()
+#  endif
+#  ifdef LED_SEND_RECEIVE
+#    define SetupIndicatorSendReceive()  \
+      pinMode(LED_SEND_RECEIVE, OUTPUT); \
+      SendReceiveIndicatorOFF();
+#    define SendReceiveIndicatorON()  digitalWrite(LED_SEND_RECEIVE, LED_SEND_RECEIVE_ON)
+#    define SendReceiveIndicatorOFF() digitalWrite(LED_SEND_RECEIVE, !LED_SEND_RECEIVE_ON)
+#  else
+#    define SetupIndicatorSendReceive()
+#    define SendReceiveIndicatorON()
+#    define SendReceiveIndicatorOFF()
+#  endif
+#  ifdef LED_INFO
+#    define SetupIndicatorInfo() \
+      pinMode(LED_INFO, OUTPUT); \
+      InfoIndicatorOFF();
+#    define InfoIndicatorON()  digitalWrite(LED_INFO, LED_INFO_ON)
+#    define InfoIndicatorOFF() digitalWrite(LED_INFO, !LED_INFO_ON)
+#  else
+#    define SetupIndicatorInfo()
+#    define InfoIndicatorON()
+#    define InfoIndicatorOFF()
+#  endif
+#  define CriticalIndicatorON() // Not used
+#  define PowerIndicatorON()    // Not used
+#  define PowerIndicatorOFF()   // Not used
+#  define SetupIndicators()     // Not used
+#else // Management of Errors, reception/emission and informations indicators with RGB LED
+#  include <Adafruit_NeoPixel.h>
+#  ifndef ANEOPIX_IND_TYPE // needs library constants
+#    define ANEOPIX_IND_TYPE NEO_GRB + NEO_KHZ800 // ws2812 and alike
+#  endif
+Adafruit_NeoPixel leds(ANEOPIX_IND_NUM_LEDS, ANEOPIX_IND_DATA_GPIO, ANEOPIX_IND_TYPE);
+#  ifdef ANEOPIX_IND_DATA_GPIO2 // Only used for Critical Indicator
+// assume the same LED type
+Adafruit_NeoPixel leds2(ANEOPIX_IND_NUM_LEDS, ANEOPIX_IND_DATA_GPIO2, ANEOPIX_IND_TYPE);
+#  endif
+
+#  ifndef RGB_LED_POWER
+#    define RGB_LED_POWER -1 // If the RGB Led is linked to GPIO pin for power define it here
+#  endif
+#  ifndef ANEOPIX_BRIGHTNESS
+#    define ANEOPIX_BRIGHTNESS 20 // Set Default RGB brightness to approx 10% (0-255 scale)
+#  endif
+#  ifndef ANEOPIX_COLOR_SCHEME // allow for different color combinations
+#    define ANEOPIX_COLOR_SCHEME 0
+#  endif
+// Allow to set LED used (for example thingpulse gateway has 4 we use them independently)
+#  ifndef ANEOPIX_INFO_LED
+#    define ANEOPIX_INFO_LED 0 // First Led
+#  endif
+#  ifndef ANEOPIX_SEND_RECEIVE_LED
+#    define ANEOPIX_SEND_RECEIVE_LED 0 // First Led
+#  endif
+#  ifndef ANEOPIX_ERROR_LED
+#    define ANEOPIX_ERROR_LED 0 // First Led
+#  endif
+#  ifndef ANEOPIX_CRITICAL_LED
+#    define ANEOPIX_CRITICAL_LED 0 // First Led
+#  endif
+// compile time calculation of color values
+#  define ANEOPIX_RED     ((0xFF * ANEOPIX_BRIGHTNESS) >> 8) << 16
+#  define ANEOPIX_RED_DIM ((0x3F * ANEOPIX_BRIGHTNESS) >> 8) << 16 // dimmed /4
+#  define ANEOPIX_ORANGE  (((0xFF * ANEOPIX_BRIGHTNESS) >> 8) << 16) | \
+                             (((0xA5 * ANEOPIX_BRIGHTNESS) >> 8) << 8)
+#  define ANEOPIX_GOLD (((0xFF * ANEOPIX_BRIGHTNESS) >> 8) << 16) | \
+                           (((0xD7 * ANEOPIX_BRIGHTNESS) >> 8) << 8)
+#  define ANEOPIX_GREEN     ((0xFF * ANEOPIX_BRIGHTNESS) >> 8) << 8
+#  define ANEOPIX_GREEN_DIM ((0x3F * ANEOPIX_BRIGHTNESS) >> 8) << 8 // dimmed /4
+#  define ANEOPIX_AQUA      (((0xFF * ANEOPIX_BRIGHTNESS) >> 8) << 8) | \
+                           (0xFF * ANEOPIX_BRIGHTNESS) >> 8
+#  define ANEOPIX_BLUE     (0xFF * ANEOPIX_BRIGHTNESS) >> 8
+#  define ANEOPIX_BLUE_DIM (0x3F * ANEOPIX_BRIGHTNESS) >> 8 // dimmed /4
+#  define ANEOPIX_BLACK    0
+
+#  if ANEOPIX_COLOR_SCHEME == 0
+// original color combination remains default
+#    define ANEOPIX_INFO        ANEOPIX_GREEN
+#    define ANEOPIX_ERROR       ANEOPIX_ORANGE
+#    define ANEOPIX_SENDRECEIVE ANEOPIX_BLUE
+#    define ANEOPIX_CRITICAL    ANEOPIX_RED // second led
+#    define ANEOPIX_POWER       ANEOPIX_GREEN // second led
+#    define ANEOPIX_BOOT        ANEOPIX_BLACK // unused
+#    define ANEOPIX_OFF         ANEOPIX_BLACK
+// color combinations tested for good visibility of onboard leds
+#  elif ANEOPIX_COLOR_SCHEME == 1
+#    define ANEOPIX_INFO        ANEOPIX_GREEN_DIM // dimmed green info background
+#    define ANEOPIX_ERROR       ANEOPIX_RED_DIM
+#    define ANEOPIX_SENDRECEIVE ANEOPIX_GOLD // bright gold  = sending
+#    define ANEOPIX_CRITICAL    ANEOPIX_BLACK // unused
+#    define ANEOPIX_POWER       ANEOPIX_BLACK // unused
+#    define ANEOPIX_BOOT        ANEOPIX_AQUA
+#    define ANEOPIX_OFF         ANEOPIX_BLACK
+#  else
+#    define ANEOPIX_INFO        ANEOPIX_BLUE_DIM // dimmed blue info background
+#    define ANEOPIX_ERROR       ANEOPIX_RED_DIM
+#    define ANEOPIX_SENDRECEIVE ANEOPIX_GOLD // bright gold  = sending
+#    define ANEOPIX_CRITICAL    ANEOPIX_BLACK // unused
+#    define ANEOPIX_POWER       ANEOPIX_BLACK // unused
+#    define ANEOPIX_BOOT        ANEOPIX_AQUA
+#    define ANEOPIX_OFF         ANEOPIX_BLACK
+#  endif
+#  ifndef ANEOPIX_IND_DATA_GPIO2
+// during boot the RGB LED is on to signal also reboots
+#    define SetupIndicators()                             \
+      pinMode(RGB_LED_POWER, OUTPUT);                     \
+      digitalWrite(RGB_LED_POWER, HIGH);                  \
+      leds.begin();                                       \
+      leds.setPixelColor(ANEOPIX_INFO_LED, ANEOPIX_BOOT); \
+      leds.show();
+#  else
+#    define SetupIndicators()            \
+      pinMode(RGB_LED_POWER, OUTPUT);    \
+      digitalWrite(RGB_LED_POWER, HIGH); \
+      leds.begin();                      \
+      leds2.begin();
+#  endif
+#  define ErrorIndicatorON()                              \
+    leds.setPixelColor(ANEOPIX_ERROR_LED, ANEOPIX_ERROR); \
+    leds.show();
+#  define ErrorIndicatorOFF()                           \
+    leds.setPixelColor(ANEOPIX_ERROR_LED, ANEOPIX_OFF); \
+    leds.show();
+#  define SendReceiveIndicatorON()                                     \
+    leds.setPixelColor(ANEOPIX_SEND_RECEIVE_LED, ANEOPIX_SENDRECEIVE); \
+    leds.show();
+#  define SendReceiveIndicatorOFF()                            \
+    leds.setPixelColor(ANEOPIX_SEND_RECEIVE_LED, ANEOPIX_OFF); \
+    leds.show();
+#  define InfoIndicatorON()                             \
+    leds.setPixelColor(ANEOPIX_INFO_LED, ANEOPIX_INFO); \
+    leds.show();
+#  define InfoIndicatorOFF()                           \
+    leds.setPixelColor(ANEOPIX_INFO_LED, ANEOPIX_OFF); \
+    leds.show();
+#  ifdef ANEOPIX_IND_DATA_GPIO2 // Used for relay power indicator
+// For the critical ON indicator there is no method to turn it off, the only way is to unplug the device
+// This enable to have persistence of the indicator to inform the user
+#    define CriticalIndicatorON()                              \
+      leds2.setPixelColor(ANEOPIX_INFO_LED, ANEOPIX_CRITICAL); \
+      leds2.show();
+#    define PowerIndicatorON()                             \
+      leds2.setPixelColor(ANEOPIX_INFO_LED, ANEOPIX_INFO); \
+      leds2.show();
+#    define PowerIndicatorOFF()                           \
+      leds2.setPixelColor(ANEOPIX_INFO_LED, ANEOPIX_OFF); \
+      leds2.show();
+#  endif
+#  define SetupIndicatorInfo()
+#  define SetupIndicatorSendReceive()
+#  define SetupIndicatorError()
 #endif
 
 #ifdef ESP8266
 //#  define TRIGGER_GPIO 14 // pin D5 as full reset button (long press >10s)
 #elif ESP32
 //#  define TRIGGER_GPIO 0 // boot button as full reset button (long press >10s)
+//#  define NO_INT_TEMP_READING true //Define if we don't want internal temperature reading for the ESP32
 #endif
 
 //      VCC   ------------D|-----------/\/\/\/\ -----------------  Arduino PIN
@@ -441,15 +667,15 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #define subjectMQTTtoX     "/commands/#"
 #define subjectMultiGTWKey "toMQTT"
 #define subjectGTWSendKey  "MQTTto"
-#define subjectFWUpdate    "firmware_update"
 
 // key used for launching commands to the gateway
 #define restartCmd "restart"
 #define eraseCmd   "erase"
 #define statusCmd  "status"
 
-// uncomment the line below to integrate msg value into the subject when receiving
-//#define valueAsASubject true
+#ifndef valueAsATopic
+#  define valueAsATopic false // define true to integrate msg value into the subject when receiving
+#endif
 
 #if defined(ESP32)
 #  define JSON_MSG_BUFFER    768
@@ -469,22 +695,96 @@ int lowpowermode = DEFAULT_LOW_POWER_MODE;
 #  define STRTO_UL_ULL       strtoul
 #endif
 
-#if defined(ZgatewayRF) || defined(ZgatewayIR) || defined(ZgatewaySRFB) || defined(ZgatewayWeatherStation)
+#if defined(ZgatewayRF) || defined(ZgatewayIR) || defined(ZgatewaySRFB) || defined(ZgatewayWeatherStation) || defined(ZgatewayRTL_433)
 // variable to avoid duplicates
 #  ifndef time_avoid_duplicate
-#    define time_avoid_duplicate 3000 // if you want to avoid duplicate mqtt message received set this to > 0, the value is the time in milliseconds during which we don't publish duplicates
+#    define time_avoid_duplicate 3000 // if you want to avoid duplicate MQTT message received set this to > 0, the value is the time in milliseconds during which we don't publish duplicates
 #  endif
 #endif
 
 #define TimeBetweenReadingSYS        120 // time between (s) system readings (like memory)
+#define TimeBetweenCheckingSYS       3600 // time between (s) system checkings (like updates)
 #define TimeLedON                    1 // time LED are ON
 #define InitialMQTTConnectionTimeout 10 // time estimated (s) before the board is connected to MQTT
-#define subjectSYStoMQTT             "/SYStoMQTT"
+#define subjectSYStoMQTT             "/SYStoMQTT" // system parameters
+#define subjectRLStoMQTT             "/RLStoMQTT" // latest release information
 #define subjectMQTTtoSYSset          "/commands/MQTTtoSYS/config"
-
+#define subjectMQTTtoSYSupdate       "/commands/MQTTtoSYS/firmware_update"
+#define TimeToResetAtStart           5000 // Time we allow the user at start for the reset command by button press
 /*-------------------DEFINE LOG LEVEL----------------------*/
 #ifndef LOG_LEVEL
 #  define LOG_LEVEL LOG_LEVEL_NOTICE
 #endif
+
+/*-------------------ESP32 Wifi band and tx power ---------------------*/
+//Certain sensors are sensitive to ESP32 Wifi which can cause interference with their normal operation
+//For example it can cause false triggers on a PIR HC-SR501
+//It is reccomended to change Wifi BAND to G and reduce tx power level to 11dBm
+//Since the WiFi protocol is persisted in the flash of the ESP32 you have to run at least once with `WiFiGMode` defined false to get Band N back.
+#ifdef ESP32
+#  ifndef WifiGMode
+//#    define WifiGMode                 true
+#  endif
+#  ifndef WifiPower
+//#    define WifiPower                 WIFI_POWER_11dBm
+#  endif
+#endif
+
+/*-----------PLACEHOLDERS FOR WebUI DISPLAY--------------*/
+#define pubWebUI(...) // display the published message onto the OLED display
+
+/*-----------PLACEHOLDERS FOR OLED/LCD DISPLAY--------------*/
+// The real definitions are in config_M5.h / config_SSD1306.h
+#define pubOled(...)        // display the published message onto the OLED display
+#define displayPrint(...)   // only print if not in low power mode
+#define lpDisplayPrint(...) // print in low power mode
+
+/*----------- SHARED WITH OMG MODULES --------------*/
+
+char mqtt_topic[parameters_size + 1] = Base_Topic;
+char gateway_name[parameters_size + 1] = Gateway_Name;
+
+void connectMQTT();
+#ifndef ESPWifiManualSetup
+void saveMqttConfig();
+#endif
+
+unsigned long uptime();
+bool cmpToMainTopic(const char*, const char*);
+void pub(const char*, const char*, bool);
+// void pub(const char*, JsonObject&);
+void pub(const char*, const char*);
+// void pub_custom_topic(const char*, JsonObject&, boolean);
+
+#if defined(ESP32)
+#  include <Preferences.h>
+Preferences preferences;
+#endif
+
+#ifdef ZmqttDiscovery
+bool disc = true; // Auto discovery with Home Assistant convention
+unsigned long lastDiscovery = 0; // Time of the last discovery to trigger automaticaly to off after DiscoveryAutoOffTimer
+#endif
+
+#if defined(ESP8266) || defined(ESP32)
+#  include <vector>
+// Flags definition for white list, black list, discovery management
+#  define device_flags_init     0 << 0
+#  define device_flags_isDisc   1 << 0
+#  define device_flags_isWhiteL 1 << 1
+#  define device_flags_isBlackL 1 << 2
+#  define device_flags_connect  1 << 3
+#  define isWhite(device)       device->isWhtL
+#  define isBlack(device)       device->isBlkL
+#  define isDiscovered(device)  device->isDisc
+#endif
+
+#if defined(ZgatewayRF) || defined(ZgatewayIR) || defined(ZgatewaySRFB) || defined(ZgatewayWeatherStation) || defined(ZgatewayRTL_433)
+bool isAduplicateSignal(SIGNAL_SIZE_UL_ULL);
+void storeSignalValue(SIGNAL_SIZE_UL_ULL);
+#endif
+
+#define convertTemp_CtoF(c) ((c * 1.8) + 32)
+#define convertTemp_FtoC(f) ((f - 32) * 5 / 9)
 
 #endif

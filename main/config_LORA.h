@@ -36,7 +36,9 @@ extern void MQTTtoLORA(char* topicOri, JsonObject& RFdata);
 #define subjectGTWLORAtoMQTT "/LORAtoMQTT"
 
 //Default parameters used when the parameters are not set in the json data
-#define LORA_BAND             868E6
+#ifndef LORA_BAND
+#  define LORA_BAND 868E6
+#endif
 #define LORA_SIGNAL_BANDWIDTH 125E3
 #define LORA_TX_POWER         17
 #define LORA_SPREADING_FACTOR 7
@@ -44,8 +46,9 @@ extern void MQTTtoLORA(char* topicOri, JsonObject& RFdata);
 #define LORA_PREAMBLE_LENGTH  8
 #define LORA_SYNC_WORD        0x12
 #define DEFAULT_CRC           true
+#define INVERT_IQ             false
 
-#define repeatLORAwMQTT false // do we repeat a received signal by using mqtt with LORA gateway
+#define repeatLORAwMQTT false // do we repeat a received signal by using MQTT with LORA gateway
 
 /*-------------------PIN DEFINITIONS----------------------*/
 //TTGO LORA BOARD ESP32 PIN DEFINITION

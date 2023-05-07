@@ -24,6 +24,10 @@
 #ifndef config_FASTLED_h
 #define config_FASTLED_h
 
+extern void setupFASTLED();
+extern void FASTLEDLoop();
+extern void MQTTtoFASTLED(char*, char*);
+extern void MQTTtoFASTLED(char*, JsonObject&);
 /*-------------------FASTLED topics & parameters----------------------*/
 //FASTLED MQTT Subjects
 #define subjectMQTTtoFASTLED              "/commands/MQTTtoFASTLED"
@@ -35,7 +39,7 @@
 // How many leds in your strip?
 #define FASTLED_NUM_LEDS 16
 
-// Uncomment/edit one of the following lines for your leds arrangement.
+// Uncomment/edit one of the following lines for your LEDs arrangement.
 
 //#define FASTLED_TYPE TM1803
 //#define FASTLED_TYPE TM1804

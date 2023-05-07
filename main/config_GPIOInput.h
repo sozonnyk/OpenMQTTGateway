@@ -28,6 +28,7 @@
 
 extern void setupGPIOInput();
 extern void GPIOInputtoMQTT();
+extern void MeasureGPIOInput();
 /*----------------------------USER PARAMETERS-----------------------------*/
 /*-------------DEFINE YOUR MQTT PARAMETERS BELOW----------------*/
 #define subjectGPIOInputtoMQTT "/GPIOInputtoMQTT"
@@ -40,6 +41,10 @@ extern void GPIOInputtoMQTT();
 #  else
 #    define INPUT_GPIO 7
 #  endif
+#endif
+
+#ifndef GPIO_INPUT_TYPE
+#  define GPIO_INPUT_TYPE INPUT_PULLUP
 #endif
 
 #define INPUT_GPIO_ON_VALUE  "HIGH"

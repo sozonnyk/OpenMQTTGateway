@@ -153,11 +153,14 @@ void MeasureDS1820Temp() {
 
           if (DS1820_DETAILS) {
             DS1820data["type"] = ds1820_type[i];
-            DS1820data["res"] = ds1820_resolution[i] + String("bit" CR);
+            DS1820data["res"] = String(ds1820_resolution[i]) + String("bit");
             DS1820data["addr"] = ds1820_addr[i];
           }
           pub((char*)(String(OW_TOPIC) + "/" + ds1820_addr[i]).c_str(), DS1820data);
           delay(10);
+#  if defined(DEEP_SLEEP_IN_US) || defined(ESP32_EXT0_WAKE_PIN)
+          ready_to_sleep = true;
+#  endif
         } else {
           Log.trace(F("DS1820: Temperature for device %s didn't change, don't publish it." CR), (char*)ds1820_addr[i].c_str());
         }

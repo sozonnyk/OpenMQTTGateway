@@ -81,7 +81,7 @@ void RF2toMQTTdiscovery(JsonObject& data) {
   data["switchType"] = 1; // switchtype = 1 turns switch on.
   serializeJson(data, payloadonstr);
   data["switchType"] = 0; // switchtype = 0 turns switch off.
-  serializeJson(data, payloadonstr);
+  serializeJson(data, payloadoffstr);
   data["switchType"] = org_switchtype; // Restore original switchvalue
 
   String switchname;
@@ -148,10 +148,13 @@ void rf2Callback(unsigned int period, unsigned long address, unsigned long group
   rf2rd.hasNewData = true;
 }
 
-#  ifdef simpleReceiving
+#  if simpleReceiving
 void MQTTtoRF2(char* topicOri, char* datacallback) {
 #    ifdef ZradioCC1101
   NewRemoteReceiver::disable();
+  disableActiveReceiver();
+  ELECHOUSE_cc1101.Init();
+  pinMode(RF_EMITTER_GPIO, OUTPUT);
   ELECHOUSE_cc1101.SetTx(CC1101_FREQUENCY); // set Transmit on
 #    endif
 
@@ -258,7 +261,7 @@ void MQTTtoRF2(char* topicOri, char* datacallback) {
 }
 #  endif
 
-#  ifdef jsonReceiving
+#  if jsonReceiving
 void MQTTtoRF2(char* topicOri, JsonObject& RF2data) { // json object decoding
 
   if (cmpToMainTopic(topicOri, subjectMQTTtoRF2)) {
@@ -268,6 +271,9 @@ void MQTTtoRF2(char* topicOri, JsonObject& RF2data) { // json object decoding
     if (boolSWITCHTYPE != 99) {
 #    ifdef ZradioCC1101
       NewRemoteReceiver::disable();
+      disableActiveReceiver();
+      ELECHOUSE_cc1101.Init();
+      pinMode(RF_EMITTER_GPIO, OUTPUT);
       ELECHOUSE_cc1101.SetTx(CC1101_FREQUENCY); // set Transmit on
 #    endif
       Log.trace(F("MQTTtoRF2 switch type ok" CR));
@@ -356,10 +362,11 @@ void enableRF2Receive() {
   disableRFReceive();
 #  endif
 
-  NewRemoteReceiver::init(RF_RECEIVER_GPIO, 2, rf2Callback);
 #  ifdef ZradioCC1101
+  ELECHOUSE_cc1101.Init();
   ELECHOUSE_cc1101.SetRx(receiveMhz); // set Receive on
 #  endif
+  NewRemoteReceiver::init(RF_RECEIVER_GPIO, 2, rf2Callback);
 }
 
 #endif

@@ -4,7 +4,6 @@
 #    include "ArduinoJson.h"
 #    include "ArduinoLog.h"
 #    include "ZgatewayBLEConnect.h"
-
 #    define convertTemp_CtoF(c) ((c * 1.8) + 32)
 
 extern bool ProcessLock;
@@ -255,6 +254,81 @@ void DT24_connect::publishData() {
   }
 }
 
+/*-----------------------BM2 HANDLING-----------------------*/
+void BM2_connect::notifyCB(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
+  if (m_taskHandle == nullptr) {
+    return; // unexpected notification
+  }
+
+  if (!ProcessLock) {
+    Log.trace(F("Callback from %s characteristic" CR), pChar->getUUID().toString().c_str());
+    if (length == 16) {
+      Log.trace(F("Device identified creating BLE buffer" CR));
+      JsonObject& BLEdata = getBTJsonObject();
+      String mac_address = m_pClient->getPeerAddress().toString().c_str();
+      mac_address.toUpperCase();
+      BLEdata["model"] = "BM2 Battery Monitor";
+      BLEdata["id"] = (char*)mac_address.c_str();
+      mbedtls_aes_context aes;
+      mbedtls_aes_init(&aes);
+      unsigned char output[16];
+      unsigned char iv[16] = {};
+      unsigned char key[16] = {
+          108,
+          101,
+          97,
+          103,
+          101,
+          110,
+          100,
+          255,
+          254,
+          49,
+          56,
+          56,
+          50,
+          52,
+          54,
+          54,
+      };
+      mbedtls_aes_setkey_dec(&aes, key, 128);
+      mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, 16, iv, (uint8_t*)&pData[0], output);
+      mbedtls_aes_free(&aes);
+      float volt = ((output[2] | (output[1] << 8)) >> 4) / 100.0f;
+      BLEdata["volt"] = volt;
+      Log.trace(F("volt: %F" CR), volt);
+      pubBT(BLEdata);
+    } else {
+      Log.notice(F("Invalid notification data" CR));
+      return;
+    }
+  } else {
+    Log.trace(F("Callback process canceled by processLock" CR));
+  }
+
+  xTaskNotifyGive(m_taskHandle);
+}
+
+void BM2_connect::publishData() {
+  NimBLEUUID serviceUUID("fff0");
+  NimBLEUUID charUUID("fff4");
+  NimBLERemoteCharacteristic* pChar = getCharacteristic(serviceUUID, charUUID);
+
+  if (pChar && pChar->canNotify()) {
+    Log.trace(F("Registering notification" CR));
+    if (pChar->subscribe(true, std::bind(&BM2_connect::notifyCB, this,
+                                         std::placeholders::_1, std::placeholders::_2,
+                                         std::placeholders::_3, std::placeholders::_4))) {
+      m_taskHandle = xTaskGetCurrentTaskHandle();
+      if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(BLE_CNCT_TIMEOUT)) == pdFALSE) {
+        m_taskHandle = nullptr;
+      }
+    } else {
+      Log.notice(F("Failed registering notification" CR));
+    }
+  }
+}
+
 /*-----------------------HHCCJCY01HHCC HANDLING-----------------------*/
 void HHCCJCY01HHCC_connect::publishData() {
   NimBLEUUID serviceUUID("00001204-0000-1000-8000-00805f9b34fb");
@@ -286,6 +360,132 @@ void HHCCJCY01HHCC_connect::publishData() {
   } else {
     Log.notice(F("Failed getting characteristic" CR));
   }
+}
+
+/*-----------------------XMWSDJ04MMC HANDLING-----------------------*/
+void XMWSDJ04MMC_connect::notifyCB(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
+  if (m_taskHandle == nullptr) {
+    return; // unexpected notification
+  }
+  if (!ProcessLock) {
+    Log.trace(F("Callback from %s characteristic" CR), pChar->getUUID().toString().c_str());
+
+    if (length == 6) {
+      Log.trace(F("Device identified creating BLE buffer" CR));
+      JsonObject BLEdata = getBTJsonObject();
+      String mac_address = m_pClient->getPeerAddress().toString().c_str();
+      mac_address.toUpperCase();
+      BLEdata["model"] = "XMWSDJ04MMC";
+      BLEdata["id"] = (char*)mac_address.c_str();
+      Log.trace(F("Device identified in CB: %s" CR), (char*)mac_address.c_str());
+      BLEdata["tempc"] = (float)((pData[0] | (pData[1] << 8)) * 0.1);
+      BLEdata["tempf"] = (float)(convertTemp_CtoF((pData[0] | (pData[1] << 8)) * 0.1));
+      BLEdata["hum"] = (float)((pData[2] | (pData[3] << 8)) * 0.1);
+      BLEdata["volt"] = (float)((pData[4] | (pData[5] << 8)) / 1000.0);
+      BLEdata["batt"] = (float)((((pData[4] | (pData[5] << 8)) / 1000.0) - 2.1) * 100);
+
+      pubBT(BLEdata);
+    } else {
+      Log.notice(F("Invalid notification data" CR));
+      return;
+    }
+  } else {
+    Log.trace(F("Callback process canceled by processLock" CR));
+  }
+
+  xTaskNotifyGive(m_taskHandle);
+}
+
+void XMWSDJ04MMC_connect::publishData() {
+  NimBLEUUID serviceUUID("ebe0ccb0-7a0a-4b0c-8a1a-6ff2997da3a6");
+  NimBLEUUID charUUID("ebe0ccc1-7a0a-4b0c-8a1a-6ff2997da3a6");
+  NimBLERemoteCharacteristic* pChar = getCharacteristic(serviceUUID, charUUID);
+
+  if (pChar && pChar->canNotify()) {
+    Log.trace(F("Registering notification" CR));
+    if (pChar->subscribe(true, std::bind(&XMWSDJ04MMC_connect::notifyCB, this,
+                                         std::placeholders::_1, std::placeholders::_2,
+                                         std::placeholders::_3, std::placeholders::_4))) {
+      m_taskHandle = xTaskGetCurrentTaskHandle();
+      if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(BLE_CNCT_TIMEOUT)) == pdFALSE) {
+        m_taskHandle = nullptr;
+      }
+    } else {
+      Log.notice(F("Failed registering notification" CR));
+    }
+  }
+}
+
+/*-----------------------SBS1 HANDLING-----------------------*/
+void SBS1_connect::notifyCB(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
+  if (m_taskHandle == nullptr) {
+    return; // unexpected notification
+  }
+  if (!ProcessLock) {
+    Log.trace(F("Callback from %s characteristic" CR), pChar->getUUID().toString().c_str());
+
+    if (length) {
+      m_notifyVal = *pData;
+    } else {
+      Log.notice(F("Invalid notification data" CR));
+      return;
+    }
+  } else {
+    Log.trace(F("Callback process canceled by processLock" CR));
+  }
+
+  xTaskNotifyGive(m_taskHandle);
+}
+
+bool SBS1_connect::processActions(std::vector<BLEAction>& actions) {
+  NimBLEUUID serviceUUID("cba20d00-224d-11e6-9fb8-0002a5d5c51b");
+  NimBLEUUID charUUID("cba20002-224d-11e6-9fb8-0002a5d5c51b");
+  NimBLEUUID notifyCharUUID("cba20003-224d-11e6-9fb8-0002a5d5c51b");
+  static byte ON[] = {0x57, 0x01, 0x01};
+  static byte OFF[] = {0x57, 0x01, 0x02};
+
+  bool result = false;
+  if (actions.size() > 0) {
+    for (auto& it : actions) {
+      if (NimBLEAddress(it.addr) == m_pClient->getPeerAddress()) {
+        NimBLERemoteCharacteristic* pChar = getCharacteristic(serviceUUID, charUUID);
+        NimBLERemoteCharacteristic* pNotifyChar = getCharacteristic(serviceUUID, notifyCharUUID);
+
+        if (it.write && pChar && pNotifyChar) {
+          Log.trace(F("processing Switchbot %s" CR), it.value.c_str());
+          if (pNotifyChar->subscribe(true,
+                                     std::bind(&SBS1_connect::notifyCB,
+                                               this, std::placeholders::_1, std::placeholders::_2,
+                                               std::placeholders::_3, std::placeholders::_4),
+                                     true)) {
+            if (it.value == "on") {
+              result = pChar->writeValue(ON, 3, false);
+            } else {
+              result = pChar->writeValue(OFF, 3, false);
+            }
+
+            if (result) {
+              m_taskHandle = xTaskGetCurrentTaskHandle();
+              if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(BLE_CNCT_TIMEOUT)) == pdFALSE) {
+                m_taskHandle = nullptr;
+              }
+              result = m_notifyVal == 0x01;
+            }
+          }
+        }
+
+        it.complete = result;
+        if (result || it.ttl <= 1) {
+          JsonObject BLEresult = getBTJsonObject();
+          BLEresult["id"] = it.addr;
+          BLEresult["state"] = result ? it.value : it.value == "on" ? "off" : "on";
+          pubBT(BLEresult);
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 #  endif //ZgatewayBT

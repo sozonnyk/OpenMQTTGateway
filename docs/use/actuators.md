@@ -31,7 +31,21 @@ Goes ON for half a second, then back to OFF:
 Goes OFF for half a second, then back to ON:
 `mosquitto_pub -t home/OpenMQTTGateway_MEGA/commands/MQTTtoONOFF -m '{"gpio":15,"cmd":"low_pulse}"'`
 
-Be aware that outputs are OFF by default when the board first start.
+To specify activations other than half a second, include pulse_length and the time in ms.
+
+Goes ON for 25 ms, then back to OFF:
+`mosquitto_pub -t home/OpenMQTTGateway_MEGA/commands/MQTTtoONOFF -m '{"gpio":15,"cmd":"high_pulse","pulse_length":25}'`
+
+Goes OFF for 25 ms, then back to ON:
+`mosquitto_pub -t home/OpenMQTTGateway_MEGA/commands/MQTTtoONOFF -m '{"gpio":15,"cmd":"low_pulse","pulse_length":25}'`
+
+Behavior at start in case of power loss (ESP32 only):
+The module will record per default the last state of the actuator and attempt to recover it upon restart. 
+Example: if your relay is ON and a power outage occurs, when the power comes back the firmware will attempt to switch ON the relay again.
+
+If you don't want this behavior you can set the macro `USE_LAST_STATE_ON_RESTART` to `false` at build time or use the command below at runtime:
+`mosquitto_pub -t home/OpenMQTTGateway_MEGA/commands/MQTTtoONOFF/config -m '{"uselaststate":false,"save":true}"'`
+The key `save` will persist the configuration upon restarts.
 
 ## FASTLED
 ### The FASTLED module support 2 different operation modes
@@ -43,7 +57,7 @@ Be aware that outputs are OFF by default when the board first start.
 
 ### Hardware wiring
 Theoretically it should be possible to use every free IO pin. But after some tests only pin D2 works at WEMOS D1. Other platforms can work.
-The default setting use NEOPIXEL (WS2812B). The simplest wiring is direct connect D2 to data pin of LED stripe and connect VCC/GND to power source. You should also add an capacitor.
+The default setting use NEOPIXEL (WS2812B). The simplest wiring is direct connect D2 to data pin of LED stripe and connect VCC/GND to power source. You should also add a capacitor.
 
 ## PWM
 This module allows control over PWM outputs.
@@ -57,7 +71,7 @@ You would typically connect a PWM output to a transistor or MOSFET to allow cont
 
 ### Configuration
 In order to use the PWM actuator, you need to configure which pins the PWM output channels will be connected to.
-There are a couple of `#define`s that achieve this.
+There are a couple of `#defines that achieve this.
 They can be defined in the `build_flags` section of the env, or by directly editing `config_PWM.h`.
 
 ```c

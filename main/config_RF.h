@@ -63,13 +63,74 @@ extern void setupRTL_433();
 extern void MQTTtoRTL_433(char* topicOri, JsonObject& RTLdata);
 extern void enableRTLreceive();
 extern void disableRTLreceive();
-extern int getRTLMinimumRSSI();
+extern int getRTLrssiThreshold();
 extern int getRTLCurrentRSSI();
 extern int getRTLMessageCount();
-/**
- * minimumRssi minimum RSSI value to enable receiver
- */
-int minimumRssi = 0;
+extern int getRTLAverageRSSI();
+extern int getOOKThresh();
+
+#  ifdef ZmqttDiscovery
+extern void launchRTL_433Discovery(bool overrideDiscovery);
+// This structure stores the entities of the RTL 433 devices and is they have been discovered or not
+// The uniqueId is composed of the device id + the key
+
+#    define uniqueIdSize  60 // longest model + longest key
+#    define modelNameSize 31 // longest model
+
+struct RTL_433device {
+  char uniqueId[uniqueIdSize];
+  char modelName[modelNameSize];
+  bool isDisc;
+};
+
+const char parameters[40][4][24] = {
+    // RTL_433 key, name, unit, device_class
+    {"temperature_C", "temperature", "°C", "temperature"},
+    {"temperature_1_C", "temperature", "°C", "temperature"},
+    {"temperature_2_C", "temperature", "°C", "temperature"},
+    {"temperature_F", "temperature", "°F", "temperature"},
+    {"time", "timestamp", "", "timestamp"},
+    {"battery_ok", "battery", "", "battery"},
+    {"humidity", "humidity", "%", "humidity"},
+    {"moisture", "moisture", "%", "humidity"},
+    {"pressure_hPa", "pressure", "hPa", "pressure"},
+    {"pressure_kPa", "pressure", "kPa", "pressure"},
+    {"wind_speed_km_h", "wind speed", "km/h", "wind_speed"},
+    {"wind_avg_km_h", "wind average", "km/h", "wind_speed"},
+    {"wind_avg_mi_h", "wind average", "mi/h", "wind_speed"},
+    {"wind_avg_m_s", "wind average", "m/s", "wind_speed"},
+    {"wind_speed_m_s", "wind speed", "m/s", "wind_speed"},
+    {"gust_speed_km_h", "gust speed", "km/h", "wind_speed"},
+    {"wind_max_km_h", "wind max", "km/h", "wind_speed"},
+    {"wind_max_m_s", "wind max", "m/s", "wind_speed"},
+    {"gust_speed_m_s", "gust speed", "m/s", "wind_speed"},
+    {"wind_dir_deg", "wind direction", "°", ""},
+    {"rain_mm", "rain", "mm", "precipitation"},
+    {"rain_mm_h", "rain", "mm/h", "precipitation"},
+    {"rain_in", "rain", "in", "precipitation_intensity"},
+    {"rain_rate_in_h", "rain", "in/h", "precipitation_intensity"},
+    {"rssi", "rssi", "dB", "signal_strength"},
+    {"snr", "snr", "dB", ""},
+    {"noise", "noise", "dB", ""},
+    {"depth_cm", "depth", "cm", ""},
+    {"power_W", "power", "W", "power"},
+    {"light_lux", "light", "lx", ""},
+    {"lux", "lux", "lx", ""},
+    {"uv", "uv", "UV index", ""},
+    {"uvi", "uvi", "UV index", ""},
+    {"storm_dist", "storm distance", "mi", ""},
+    {"strike_distance", "strike distance", "mi", ""},
+    {"tamper", "tamper", "", ""},
+    {"alarm", "alarm", "", ""},
+    {"motion", "motion", "", "motion"},
+    {"strike_count", "strike count", "", ""}, // from rtl_433_mqtt_hass.py
+    {"event", "Status", "", "moisture"}};
+#  endif
+#  ifdef RTL_433_DISCOVERY_LOGGING
+#    define DISCOVERY_TRACE_LOG(...) Log.trace(__VA_ARGS__)
+#  else
+#    define DISCOVERY_TRACE_LOG(...)
+#  endif
 #endif
 /*-------------------RF topics & parameters----------------------*/
 //433Mhz MQTT Subjects and keys
@@ -78,7 +139,7 @@ int minimumRssi = 0;
 #define subjectGTWRFtoMQTT "/433toMQTT"
 #define RFprotocolKey      "433_" // protocol will be defined if a subject contains RFprotocolKey followed by a value of 1 digit
 #define RFbitsKey          "RFBITS_" // bits  will be defined if a subject contains RFbitsKey followed by a value of 2 digits
-#define repeatRFwMQTT      false // do we repeat a received signal by using mqtt with RF gateway
+#define repeatRFwMQTT      false // do we repeat a received signal by using MQTT with RF gateway
 #define RFpulselengthKey   "PLSL_" // pulselength will be defined if a subject contains RFprotocolKey followed by a value of 3 digits
 // subject monitored to listen traffic processed by other gateways to store data and avoid ntuple
 #define subjectMultiGTWRF "+/+/433toMQTT"
@@ -101,10 +162,12 @@ int minimumRssi = 0;
 
 /*-------------------ESPPiLight topics & parameters----------------------*/
 //433Mhz Pilight MQTT Subjects and keys
-#define subjectMQTTtoPilight    "/commands/MQTTtoPilight"
-#define subjectPilighttoMQTT    "/PilighttoMQTT"
-#define subjectGTWPilighttoMQTT "/PilighttoMQTT"
-#define repeatPilightwMQTT      false // do we repeat a received signal by using mqtt with Pilight gateway
+#define subjectMQTTtoPilight         "/commands/MQTTtoPilight"
+#define subjectMQTTtoPilightProtocol "/commands/MQTTtoPilight/protocols"
+#define subjectPilighttoMQTT         "/PilighttoMQTT"
+#define subjectGTWPilighttoMQTT      "/PilighttoMQTT"
+#define repeatPilightwMQTT           false // do we repeat a received signal by using MQTT with Pilight gateway
+//#define Pilight_rawEnabled true   // enables Pilight RAW return - switchable via MQTT
 
 /*-------------------RTL_433 topics & parameters----------------------*/
 //433Mhz RTL_433 MQTT Subjects and keys
@@ -117,8 +180,14 @@ int minimumRssi = 0;
 #  define CC1101_FREQUENCY 433.92
 #endif
 // Allow ZGatewayRF Module to change receive frequency of CC1101 Transceiver module
-#ifdef ZradioCC1101
+#if defined(ZradioCC1101) || defined(ZradioSX127x)
 float receiveMhz = CC1101_FREQUENCY;
+#endif
+/*-------------------CC1101 DefaultTXPower----------------------*/
+//Adjust the default TX-Power for sending radio if ZradioCC1101 is used.
+//The following settings are possible depending on the frequency band.  (-30  -20  -15  -10  -6    0    5    7    10   11   12) Default is max!
+#ifndef RF_CC1101_TXPOWER
+#  define RF_CC1101_TXPOWER 12
 #endif
 
 /*-------------------PIN DEFINITIONS----------------------*/
@@ -163,7 +232,7 @@ int activeReceiver = 0;
 #  define ACTIVE_RTL      3
 #  define ACTIVE_RF2      4
 
-#  ifdef ZradioCC1101
+#  if defined(ZradioCC1101) || defined(ZradioSX127x)
 bool validFrequency(float mhz) {
   //  CC1101 valid frequencies 300-348 MHZ, 387-464MHZ and 779-928MHZ.
   if (mhz >= 300 && mhz <= 348)
@@ -177,8 +246,6 @@ bool validFrequency(float mhz) {
 #  endif
 
 int currentReceiver = -1;
-
-extern void stateMeasures(); // Send a status message
 
 #  if !defined(ZgatewayRFM69) && !defined(ZactuatorSomfy)
 #    if defined(ESP8266) || defined(ESP32)
@@ -264,6 +331,37 @@ void enableActiveReceiver(bool isBoot) {
   }
   currentReceiver = activeReceiver;
 }
+
+void disableActiveReceiver() {
+  Log.trace(F("disableActiveReceiver: %d" CR), activeReceiver);
+  switch (activeReceiver) {
+#  ifdef ZgatewayPilight
+    case ACTIVE_PILIGHT:
+      disablePilightReceive();
+      break;
+#  endif
+#  ifdef ZgatewayRF
+    case ACTIVE_RF:
+      disableRFReceive();
+      break;
+#  endif
+#  ifdef ZgatewayRTL_433
+    case ACTIVE_RTL:
+      disableRTLreceive();
+      break;
+#  endif
+#  ifdef ZgatewayRF2
+    case ACTIVE_RF2:
+      disableRF2Receive();
+      break;
+#  endif
+#  ifndef ARDUINO_AVR_UNO // Space issues with the UNO
+    default:
+      Log.error(F("ERROR: unsupported receiver %d" CR), activeReceiver);
+#  endif
+  }
+}
+
 #endif
 
 #endif
